@@ -1,5 +1,9 @@
 from flask import Flask, request
 import requests
+import openai
+import os
+
+openai.api_key = os.getenv("OPENAI_API_KEY")  # Or hardcode it (not recommended)
 
 app = Flask(__name__)
 
@@ -32,16 +36,21 @@ def webhook():
         return "ok", 200
 
 def generate_reply(user_text):
-    # Customize this for your business
-    text = user_text.lower()
-    if "menu" in text:
-        return "Here’s our menu: https://your-restaurant-site.com/menu"
-    elif "hours" in text or "open" in text:
-        return "We’re open every day from 10 AM to 10 PM!"
-    elif "location" in text or "address" in text:
-        return "You’ll find us at 123 Main Street, Kitchener!"
-    else:
-        return "Hey there! You can ask me about our menu, hours, or location 😊"
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",  # or "gpt-3.5-turbo" if you're on a smaller budget
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant for a restaurant named Kitchener Grill. Answer casually and helpfully."},
+                {"role": "user", "content": user_text}
+            ],
+            temperature=0.7,
+            max_tokens=200
+        )
+        return response["choices"][0]["message"]["content"].strip()
+
+    except Exception as e:
+        print("LLM error:", e)
+        return "Oops! Something went wrong. Can you try again?"
 
 def send_message(recipient_id, message_text):
     url = "https://graph.facebook.com/v17.0/me/messages"
