@@ -1,11 +1,19 @@
 from flask import Flask, request
 import requests
+import os
+import openai
+from dotenv import load_dotenv
 
-app = Flask(__name__)
+# 🔁 Load environment variables from .env file
+load_dotenv()
 
 # 🔐 Tokens
-VERIFY_TOKEN = "my_secret_token"  # You gave this to Facebook when verifying webhook
-PAGE_ACCESS_TOKEN = "EAARZCFOn4eVYBOx5tAAKPBxE9bCgJeZBghBsFE6TyZB8JjO1ysgNZB8nfGPzhvsvFnsoDBw2rjfmMZBJsfEzxjQLv4gqOMphcqjq7HTAGtPKEX97j8uaaVvOIOsjnxYOOGu84LiLibU3hoE2ZAsZBFV7xQHANu5URgbkEF5ISLQIqSHvYIgXR60sMNnjXlhMTlomHtwKFZBnVAZDZD"
+VERIFY_TOKEN = "my_secret_token"  # Facebook Webhook verification token
+PAGE_ACCESS_TOKEN = os.getenv("PAGE_ACCESS_TOKEN")
+openai.api_key = os.getenv("GROQ_API_KEY")
+openai.api_base = "https://api.groq.com/openai/v1"  # Use Groq's OpenAI-compatible API
+
+app = Flask(__name__)
 
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
@@ -32,16 +40,31 @@ def webhook():
         return "ok", 200
 
 def generate_reply(user_text):
-    # Customize this for your business
     text = user_text.lower()
+
+    # Keyword-based responses
     if "menu" in text:
         return "Here’s our menu: https://your-restaurant-site.com/menu"
     elif "hours" in text or "open" in text:
         return "We’re open every day from 10 AM to 10 PM!"
     elif "location" in text or "address" in text:
         return "You’ll find us at 123 Main Street, Kitchener!"
-    else:
-        return "Hey there! You can ask me about our menu, hours, or location 😊"
+
+    # Fallback to Groq LLM for anything else
+    try:
+        response = openai.ChatCompletion.create(
+            model="llama3-70b-8192",
+            messages=[
+                {"role": "system", "content": "You are a friendly chatbot for a restaurant called Kitchener Grill. Answer casually and clearly."},
+                {"role": "user", "content": user_text}
+            ],
+            temperature=0.7,
+            max_tokens=200
+        )
+        return response['choices'][0]['message']['content'].strip()
+    except Exception as e:
+        print("Groq API error:", e)
+        return "Sorry, I’m having trouble responding right now. Please try again later."
 
 def send_message(recipient_id, message_text):
     url = "https://graph.facebook.com/v17.0/me/messages"
