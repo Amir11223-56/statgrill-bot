@@ -40,27 +40,27 @@ def webhook():
         return "ok", 200
 
 def generate_reply(user_text):
-    text = user_text.lower()
-
-    # Keyword-based responses
-    if "menu" in text:
-        return "Here’s our menu: https://your-restaurant-site.com/menu"
-    elif "hours" in text or "open" in text:
-        return "We’re open every day from 10 AM to 10 PM!"
-    elif "location" in text or "address" in text:
-        return "You’ll find us at 123 Main Street, Kitchener!"
-
-    # Fallback to Groq LLM for anything else
+    
     try:
         response = openai.ChatCompletion.create(
             model="llama3-70b-8192",
             messages=[
-                {"role": "system", "content": "You are a friendly chatbot for a restaurant called Kitchener Grill. Answer casually and clearly."},
+                {
+                    "role": "system",
+                    "content": (
+                        "You're a friendly chatbot for a restaurant called Star Grill. "
+                        "Keep answers short and casual. "
+                        "We serve gozleme (chicken, beef, pumpkin, Turkish special, veggie, egg and cheese), "
+                        "chevaps (Serbian-style), and burgers. "
+                        "Everything is $15."
+                    )
+                },
                 {"role": "user", "content": user_text}
             ],
             temperature=0.7,
-            max_tokens=200
+            max_tokens=150
         )
+
         return response['choices'][0]['message']['content'].strip()
     except Exception as e:
         print("Groq API error:", e)
